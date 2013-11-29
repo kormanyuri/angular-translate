@@ -94,6 +94,7 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
         $translationTable[langKey] = {};
       }
       angular.extend($translationTable[langKey], flatObject(translationTable));
+        console.log('extended ' + langKey);
     }
     return this;
   };
@@ -518,7 +519,6 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
         interpolatorHashMap = {};
 
       var loadAsync = function (key) {
-
         if (!key) {
           throw "No language key specified for loading.";
         }
@@ -581,6 +581,7 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
       }
 
       // function to check if the current language is a fallback language or not
+      // and if it is loaded already (in case we need it, load it!)
       var checkValidFallback = function (usesLang) {
         if (usesLang && $fallbackLanguage) {
           if (angular.isArray($fallbackLanguage)) {
@@ -598,6 +599,24 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
           return false;
         }
         return false;
+      };
+
+      var loadAsyncTrans = function (key) {
+          console.log('i am loading async ' + key);
+          $nextLang = key;
+          loadAsync(key).then(
+              function (translation) {
+                  $nextLang = undefined;
+
+                  console.log(translations(translation.key, translation.table));
+              }, function (key) {
+                  console.log('convertin err g');
+                  $nextLang = undefined;
+                  $rootScope.$broadcast('$translateChangeError');
+                  deferred.reject(key);
+                  $rootScope.$broadcast('$translateChangeEnd');
+              }
+          );
       };
 
       var $translate = function (translationId, interpolateParams, interpolationId) {
@@ -630,12 +649,18 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
           if (typeof $fallbackLanguage === 'string') {
             normatedLanguages = [];
             normatedLanguages.push($fallbackLanguage);
+
           } else {
             normatedLanguages = $fallbackLanguage;
           }
           var fallbackLanguagesSize = normatedLanguages.length;
           for (var current = 0; current < fallbackLanguagesSize; current++) {
             if ($uses !== $translationTable[normatedLanguages[current]]) {
+                  console.log('hier ' + normatedLanguages[current] );
+                  if (!$translationTable[normatedLanguages[current]] && $loaderFactory) {
+                      loadAsyncTrans(normatedLanguages[current]);
+                  }
+
               var translationFromList = $translationTable[normatedLanguages[current]][translationId];
 
               // check if a translation for the fallback language exists
@@ -859,7 +884,7 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
 
           var loaders = [];
           if ($fallbackLanguage) {
-            if (typeof $fallbackLanguage === 'string') {
+            if (angular.isString($fallbackLanguage)) {
               loaders.push(loadAsync($fallbackLanguage));
             } else {
               var fallbackLanguagesSize = $fallbackLanguage.length;
@@ -939,6 +964,7 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
 
         if ($fallbackLanguage) {
           if (typeof $fallbackLanguage === 'string' && !$translationTable[$fallbackLanguage]) {
+              console.log('::: ' + $fallbackLanguage);
             loadAsync($fallbackLanguage);
           } else {
             var fallbackLanguagesSize = $fallbackLanguage.length;
