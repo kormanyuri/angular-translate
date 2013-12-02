@@ -603,11 +603,12 @@ describe('pascalprecht.translate', function () {
     describe('fallbackLanguage()', function () {
       beforeEach(module('pascalprecht.translate', function ($translateProvider, $provide) {
 
-        $translateProvider.useLoader('customLoader', {});
+
 
         $provide.factory('customLoader', ['$q', '$timeout', function ($q, $timeout) {
           return function (options) {
-            var deferred = $q.defer(), translations;
+            var deferred = $q.defer(), deferred_ne = $q.defer();
+            var translations;
             console.log('langkey: ' + options.key);
 
             if (options.key === 'en') {
@@ -615,31 +616,37 @@ describe('pascalprecht.translate', function () {
                     FOO: 'foo',
                     BAR: 'bar'
                 };
+              $timeout(function () {
+                deferred.resolve(translations);
+              }, Infinity);
+
             } else if (options.key === 'ne') {
-                console.log('setting ne');
+              console.log('getting ne translation table');
                 translations = {
                     FOO: 'ne_foo',
                     BAR: 'ne_bar',
                     ONLY_NE: 'only_NE'
                 };
+              $timeout(function () {
+                deferred_ne.resolve(translations);
+              }, Infinity);
+
             }
-
-            $timeout(function () {
-              deferred.resolve(translations);
-            }, Infinity);
-
-            return deferred.promise;
+            return $q.all([deferred.promise, deferred_ne.promise]);
           };
         }]);
+        $translateProvider.useLoader('customLoader', {});
 
         $translateProvider.uses('en');
         $translateProvider.fallbackLanguage('ne');
       }));
 
       it('should use custom loader to load fallbackLanguage', function () {
-        inject(function ($translate, $timeout) {
+        inject(function ($translate, $timeout, $injector) {
           $timeout.flush();
           expect($translate('BAR')).toEqual('bar');
+          $timeout = $injector.get('$timeout');
+          $timeout.flush();
           expect($translate('ONLY_NE')).toEqual('only_NE');
         });
       });
@@ -774,12 +781,12 @@ describe('pascalprecht.translate', function () {
 
     describe('setting both indicators implicitly', function () {
       beforeEach(module('pascalprecht.translate', function ($translateProvider) {
-        $translateProvider.translationNotFoundIndicator('✘');
+        $translateProvider.translationNotFoundIndicator('?');
       }));
 
       it('should inject indicators for not found translations', function () {
         inject(function ($translate) {
-          expect($translate('NOT_FOUND')).toEqual('✘ NOT_FOUND ✘');
+          expect($translate('NOT_FOUND')).toEqual('? NOT_FOUND ?');
         });
       });
     });
@@ -787,12 +794,12 @@ describe('pascalprecht.translate', function () {
     describe('setting left indicator explicitly', function () {
 
       beforeEach(module('pascalprecht.translate', function ($translateProvider) {
-        $translateProvider.translationNotFoundIndicatorLeft('✘');
+        $translateProvider.translationNotFoundIndicatorLeft('?');
       }));
 
       it('should inject left indicator for not found translations', function () {
         inject(function ($translate) {
-          expect($translate('NOT_FOUND')).toEqual('✘ NOT_FOUND');
+          expect($translate('NOT_FOUND')).toEqual('? NOT_FOUND');
         });
       });
     });
@@ -800,12 +807,12 @@ describe('pascalprecht.translate', function () {
     describe('setting right indicator explicitly', function () {
 
       beforeEach(module('pascalprecht.translate', function ($translateProvider) {
-        $translateProvider.translationNotFoundIndicatorRight('✘');
+        $translateProvider.translationNotFoundIndicatorRight('?');
       }));
 
       it('should inject right indicator for not found translations', function () {
         inject(function ($translate) {
-          expect($translate('NOT_FOUND')).toEqual('NOT_FOUND ✘');
+          expect($translate('NOT_FOUND')).toEqual('NOT_FOUND ?');
         });
       });
     });

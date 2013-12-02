@@ -22,4 +22,5 @@ module.exports = function (app, dir) {
     res.send(200);
   });
 
+})
 };
