@@ -429,6 +429,11 @@ module.exports = function (grunt) {
   });
 
 
+  grunt.registerTask('spec', 'Runs a task on a specified file', function (taskName, fileName) {
+      globalConfig.file = fileName;
+      grunt.task.run(taskName + ':spec');
+    });
+
 
 
   grunt.registerTask('default', ['jshint:all', 'karma']);
